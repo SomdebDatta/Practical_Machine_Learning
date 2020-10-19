@@ -1,0 +1,100 @@
+---
+title: "PracticalMachineLearning"
+author: "SomdebDatta"
+date: "10/18/2020"
+output: html_document
+---
+
+## Importing Libraries
+```{r}
+library(caret)
+library(rpart)
+library(corrplot)
+library(ggplot2)
+library(randomForest)
+library(rattle)
+set.seed(12345)
+```
+
+## Loading the csv files
+```{r}
+training_data <- read.csv("C:/Users/HP/Downloads/pml-training.csv")[,-1]
+testing_data <- read.csv("C:/Users/HP/Downloads/pml-testing.csv")[,-1]
+```
+
+
+## Dimensions before cleaning
+```{r}
+dim(training_data)
+dim(testing_data)
+```
+
+
+## Data Cleaning
+```{r}
+## Removing missing/NA values
+missing_values <- sapply(training_data, function(x) mean(is.na(x))) > 0.9
+training_data <- training_data[, missing_values == "FALSE"]
+testing_data <- testing_data[, missing_values == "FALSE"]
+
+## Removing predictors with missing values
+pred_missing <- nearZeroVar(training_data)
+training_data <- training_data[,-pred_missing]
+testing_data <- testing_data[,-pred_missing]
+```
+
+
+## Dimensions after Cleaning
+```{r}
+dim(training_data)
+dim(testing_data)
+```
+
+## Taking a look in to the Cleaned Dataset
+```{r}
+head(training_data)
+```
+
+## Partitioning data
+```{r}
+data_partition <- createDataPartition(y= training_data$classe, p = 0.7, list = FALSE)
+training_data <- training_data[data_partition, ]
+crossvalid <- training_data[-data_partition, ]
+```
+
+## Training our Model
+## 1.Decision Tree
+```{r}
+model_dt <- train(classe~., data = training_data, method = "rpart")
+# Crossvalidating
+pred_train_tree <- predict(model_dt, training_data)
+conf_matrix_train_tree <- confusionMatrix(pred_train_tree, training_data$classe)
+
+pred_crossvalid_tree <- predict(model_dt, crossvalid)
+conf_matrix_cv_tree <- confusionMatrix(pred_crossvalid_tree, crossvalid$classe)
+
+print(conf_matrix_cv_tree)
+```
+
+## 2. RandomForest
+```{r}
+rf_model <- train(classe~., data = training_data, method = "rf", ntree=50)
+# Crossvalidating
+rf_pred_train <- predict(rf_model, training_data)
+rf_conf_matrix_train <- confusionMatrix(rf_pred_train, training_data$classe)
+
+rf_pred_crossvalid <- predict(rf_model, crossvalid)
+rf_conf_matrix_cv <- confusionMatrix(rf_pred_crossvalid, crossvalid$classe)
+
+print(rf_conf_matrix_cv)
+```
+
+## Predicting on Training Dataset
+```{r}
+final_prediction <- predict(rf_model, testing_data)
+final_prediction
+```
+
+Conclusion:
+It is clear that the RandomForest Model was far more accurate than the DecisionTree Model, even though it took more time.
+This proves that the RandomForest algorithm performs better in practice.
